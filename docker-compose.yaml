@@ -1,0 +1,73 @@
+# docker-compose build && docker-compose up -d
+# If "docker-compose logs ckan" shows DB not ready, run "docker-compose restart ckan" a few times.
+version: "3.5"
+
+services:
+  nginx:
+    image: nginx
+    ports:
+      - 80:80
+    depends_on:
+      - ckan
+      - next
+    # logging:
+    #   driver: syslog
+    #   options:
+    #     syslog-address: tcp://logstash:5001
+    #     syslog-facility: daemon
+
+  ckan:
+    container_name: ckan
+    image: "bdd/ckan${VTAG}"
+    links:
+      - db
+      - solr
+      - redis
+    depends_on:
+      - db
+    environment:
+      # Defaults work with linked containers, change to use own Postgres, SolR, Redis or Datapusher
+      # TODO: remove these env vars if they are in production.ini
+      - CKAN_SQLALCHEMY_URL=postgresql://ckan:${POSTGRES_PASSWORD}@db/ckan
+      - CKAN_DATASTORE_WRITE_URL=postgresql://ckan:${POSTGRES_PASSWORD}@db/datastore
+      - CKAN_DATASTORE_READ_URL=postgresql://datastore_ro:${DATASTORE_READONLY_PASSWORD}@db/datastore
+      - CKAN_SOLR_URL=http://solr:8983/solr/ckan
+      - CKAN_DATAPUSHER_URL=http://datapusher:8800
+      - CKAN_SITE_URL=${CKAN_SITE_URL}
+      # - CKAN_MAX_UPLOAD_SIZE_MB=${CKAN_MAX_UPLOAD_SIZE_MB}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - DS_RO_PASS=${DATASTORE_READONLY_PASSWORD}
+      - CKAN_REDIS_URL=redis://redis:6379/0
+    command: ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "wsgi"]
+
+  datapusher: # Not really used, ckan dependency
+    container_name: datapusher
+    image: clementmouchet/datapusher
+    ports:
+      - "8800:8800"
+
+  db:
+    container_name: db
+    image: bdd/db
+    ports:
+      - 5432:5432
+    environment:
+      - DS_RO_PASS=${DATASTORE_READONLY_PASSWORD}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_USER=ckan
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "ckan"]
+
+  solr:
+    container_name: solr
+    image: bdd/solr
+
+  redis: # Not really used, ckan dependency
+    container_name: redis
+    image: redis:latest
+
+  next:
+    container_name: next
+    ports:
+      - "3000:3000"
+    image: bdd/next${VTAG}

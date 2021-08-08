@@ -1,0 +1,7 @@
+# vendor
+build
+tmp
+.git
+stack/ckan/assets
+stack/ckan/assets.zip
+vendor/ckan/.git

@@ -1,0 +1,9 @@
+.DS_Store
+.idea
+tmp
+build
+.env.prod
+dive.log
+configs/ckan.override.prod.ini
+.idea
+.hypothesis

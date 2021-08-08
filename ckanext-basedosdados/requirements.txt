@@ -1,0 +1,9 @@
+more_itertools
+stringcase
+boltons
+cerberus
+git+https://github.com/PrettyWood/pydantic.git@f/discriminated-union
+jsonschema
+typing_extensions
+pytest
+jsonref
