@@ -1,8 +1,8 @@
 #!/bin/bash -ex
 cd $(git rev-parse --show-toplevel)
 
-HOST=ec2-user@basedosdados.org
-SSH="ssh -o StrictHostKeyChecking=no -i ~/.ssh/BD.pem $HOST"
+HOST=ec2-user@ec2-18-231-177-33.sa-east-1.compute.amazonaws.com
+SSH="ssh -o StrictHostKeyChecking=no -i ~/.ssh/keypair.cer $HOST"
 VTAG=":`date +%H.%M.%S`" # Simple mechanism to force image update
 
 BUILD_DIR="/tmp/bdd_build"
@@ -16,7 +16,6 @@ deploy() {
     restart_services
     rebuild_index
     install_crontab
-    install_apprise
 }
 
 deploy_configs() {
@@ -49,8 +48,8 @@ build_config() {
 }
 send() {
     $SSH 'mkdir -p ~/basedosdados/'
-    rsync -e 'ssh -i ~/.ssh/BD.pem' -azvv --progress --partial ./build/images/ $HOST:~/basedosdados/images/ & # TODO: debug this, the size-only seems to be failing...
-    rsync -e 'ssh -i ~/.ssh/BD.pem' -azvv --exclude=images --checksum ./build/ $HOST:~/basedosdados/ &
+    rsync -e 'ssh -i ~/.ssh/keypair.cer' -azvv --progress --partial ./build/images/ $HOST:~/basedosdados/images/ & # TODO: debug this, the size-only seems to be failing...
+    rsync -e 'ssh -i ~/.ssh/keypair.cer' -azvv --exclude=images --checksum ./build/ $HOST:~/basedosdados/ &
     for i in `jobs -p`; do wait $i ; done
 }
 load_images() {
@@ -120,14 +119,6 @@ install_crontab() {
         echo "####### AUTO GENERATED CRONTAB - DONT EDIT MANUALLY ##########"
         cat ~/basedosdados/basedosdados_crontab
         ) | crontab
-    '
-}
-install_apprise() {
-    $SSH  '
-        cd ~/basedosdados/
-        source .env
-        echo $APPRISE_CONFIG > ~/.apprise
-        grep DISCORD .env | sed s/DISCORD_//g > ~/.discord_ids
     '
 }
 
